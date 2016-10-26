@@ -10,4 +10,6 @@ public class TrainingTddApplication {
 		SpringApplication.run(TrainingTddApplication.class, args);
 	}
 
+
+
 }

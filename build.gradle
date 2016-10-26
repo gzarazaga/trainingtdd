@@ -25,17 +25,38 @@ repositories {
 	mavenCentral()
 }
 
+// Service and Acceptance Tests - Dependency Configurations
+configurations {
+	serviceTestCompile.extendsFrom testCompile
+	serviceTestRuntime.extendsFrom testRuntime
+	acceptanceTestCompile.extendsFrom serviceTestCompile
+	acceptanceTestRuntime.extendsFrom serviceTestRuntime
+}
+
 dependencies {
 	compile group: 'org.springframework.boot', name: 'spring-boot-starter-web', version: spring_boot_version
-	compile('info.cukes:cucumber-java:1.2.4')
 	compile('junit:junit:4.12')
-	compile('info.cukes:cucumber-junit:1.2.4')
-	compile('info.cukes:cucumber-spring:1.2.4')
 
 	testCompile('org.springframework.boot:spring-boot-starter-test')
+
+	//serviceTestCompile group: 'io.rest-assured', name: 'rest-assured', version: rest_assured_version
+	compile('io.rest-assured:rest-assured:3.0.1')
+
+	acceptanceTestCompile('info.cukes:cucumber-java:1.2.4')
+	acceptanceTestCompile('info.cukes:cucumber-junit:1.2.4')
+	acceptanceTestCompile('info.cukes:cucumber-spring:1.2.4')
+
 }
 
 sourceSets {
+	serviceTest {
+		java {
+			compileClasspath += main.output + test.output
+			runtimeClasspath += main.output + test.output
+			srcDir file('src/serviceTest/java')
+		}
+		resources.srcDir file('src/serviceTest/resources')
+	}
 	acceptanceTest {
 		java {
 			compileClasspath += main.output + test.output
@@ -52,6 +73,14 @@ configurations {
 	acceptanceTestRuntime.extendsFrom testRuntime
 }
 
+// Service Tests - Task Configuration
+
+task serviceTest(type: Test) {
+	testClassesDir = sourceSets.serviceTest.output.classesDir
+	classpath = sourceSets.serviceTest.runtimeClasspath
+	outputs.upToDateWhen { false }
+}
+
 task acceptanceTest(type: Test) {
 	testClassesDir = sourceSets.acceptanceTest.output.classesDir
 	classpath = sourceSets.acceptanceTest.runtimeClasspath
@@ -65,7 +94,14 @@ task acceptanceTest(type: Test) {
 // Ensure that our acceptance tests are run before the check task and that the check task fails the build if there are failing acceptance tests.
 // Ensure that our unit tests are run before our acceptance tests. This guarantees that our unit tests are run even if our acceptance tests fails.
 check.dependsOn acceptanceTest
-acceptanceTest.mustRunAfter test
+
+// Ensure that Service and Acceptance Tests are run before the check task and that it fails the build if there are failing service tests
+check.dependsOn serviceTest
+// Ensure that Unit Tests are run before Integration Tests
+serviceTest.mustRunAfter test
+// Ensure that Service Tests are run before Acceptance Tests
+acceptanceTest.mustRunAfter serviceTest
+
 
 // Ensure that the HTML reports of unit and acceptance tests are created to different report
 // build/reports/acceptanceTest directory contains the HTML report that contains the test results of our acceptance tests.
